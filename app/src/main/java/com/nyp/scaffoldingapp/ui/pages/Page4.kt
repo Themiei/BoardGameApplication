@@ -5,7 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nyp.scaffoldingapp.ui.theme.ScaffoldingTheme
 
 /**
  * Page 4 — the game launcher.
@@ -52,5 +54,15 @@ fun Page4(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Preview
+@Composable
+fun PreviewCollectionsPage()
+{
+    ScaffoldingTheme()
+    {
+        Page4();
     }
 }
