@@ -18,39 +18,22 @@ import androidx.compose.foundation.lazy.LazyRow
 import java.util.Date
 
 
-data class Collection(val collectionID: Int, val name: String, val status : CollectionStatus)
+data class GameCollection(val id : Int, val name : String, val status : CollectionStatus)
 
-data class GameRef(val gameID : Int, val gameName : String, val gameThumbnail : Image)
+data class GameRef(val id : Int, val name : String, val thumbnail : Image, val thumbNailURL : String)
 
-data class Membership(val collectionID : Int, val gameID : Int, val dateAdded : Date)
+data class Membership(val collectionID : Int, val gameID : Int, val dateAdded : Long)
 enum class CollectionStatus{
     Owned,
     Wishlist,
-    Others
+    Custom
 }
 @Composable
 fun Page4(modifier: Modifier = Modifier) {
    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), verticalArrangement = Arrangement.Top,
        horizontalAlignment = Alignment.CenterHorizontally)
    {
-        Text("Test",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            )
-       Spacer(modifier.size(8.dp))
-       HorizontalDivider(modifier = Modifier, 4.dp)
-       LazyColumn()
-       {
-
-           item{
-               LazyRow(
-                   contentPadding = PaddingValues(horizontal = 16.dp),
-                   horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-
-
-               }
-           }
-       }
+        
    }
 }
 
