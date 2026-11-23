@@ -36,7 +36,7 @@ class CollectionRepository {
     public fun CreateCollection(name : String) : Boolean {
         if(isNameTaken(name) || name.isBlank())
             return false
-        val customCollection = GameCollection(nextCollectionID(), name, CollectionType.Custom)
+        val customCollection = GameCollection(nextCollectionID(), name.trim(), CollectionType.Custom)
         collectionList.add(customCollection)
         return true
 
@@ -92,7 +92,7 @@ class CollectionRepository {
         return false
     }
 
-    fun isNameTaken(name : String) : Boolean
+    public fun isNameTaken(name : String) : Boolean
     {
         val result = name.filterNot{it.isWhitespace()}.lowercase()
         val bool = collectionList.any{it.name.filterNot{it.isWhitespace()}.lowercase() == result}
@@ -114,15 +114,16 @@ class CollectionRepository {
         return
     }
 
-    public fun gamesIn(collectionID : Int) : List<Membership>
+    public fun gamesIn(collectionID : Int) : List<GameRef>
     {
-       return membershipList.filter{it.collectionID == collectionID}
+        val membershipPings = membershipList.filter{it.collectionID == collectionID}.map{it.gameID}.toSet()
+       return gamesList.filter{it.id in membershipPings}
     }
 
     public fun collectionsContaining(gameID : Int) : List<GameCollection>
     {
         val listOfCollectionIDs = membershipList.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
-        return collectionList.filter{it.name != null && it.id  in listOfCollectionIDs}
+        return collectionList.filter{it.id in listOfCollectionIDs}
     }
 
     public fun findCollection(id : Int) : GameCollection? {
