@@ -34,7 +34,7 @@ class CollectionRepository {
     }
 
     public fun CreateCollection(name : String) : Boolean {
-        if(isNameTaken(name))
+        if(isNameTaken(name) || name.isBlank())
             return false
         val customCollection = GameCollection(nextCollectionID(), name, CollectionType.Custom)
         collectionList.add(customCollection)
@@ -112,6 +112,21 @@ class CollectionRepository {
             return
         gamesList.add(game)
         return
+    }
+
+    public fun gamesIn(collectionID : Int) : List<Membership>
+    {
+       return membershipList.filter{it.collectionID == collectionID}
+    }
+
+    public fun collectionsContaining(gameID : Int) : List<GameCollection>
+    {
+        val listOfCollectionIDs = membershipList.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
+        return collectionList.filter{it.name != null && it.id  in listOfCollectionIDs}
+    }
+
+    public fun findCollection(id : Int) : GameCollection? {
+        return collectionList.find{it.id == id}
     }
 }
 
