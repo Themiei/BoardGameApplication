@@ -7,20 +7,20 @@ import com.nyp.scaffoldingapp.data.model.CollectionType
 
 class CollectionRepository {
 
-    private val collectionList : MutableList<GameCollection> = mutableListOf<GameCollection>();
-    private val gamesList : MutableList<GameRef> = mutableListOf<GameRef>();
-    private val membershipList : MutableList<Membership> = mutableListOf<Membership>();
+    private val collectionList : MutableList<GameCollection> = mutableListOf<GameCollection>()
+    private val gamesList : MutableList<GameRef> = mutableListOf<GameRef>()
+    private val membershipList : MutableList<Membership> = mutableListOf<Membership>()
 
     public fun ReadCollections(): MutableList<GameCollection> {
-        return collectionList;
+        return collectionList
     }
 
     public fun ReadGames() : List<GameRef> {
-        return gamesList;
+        return gamesList
     }
 
     public fun ReadMemberships() : List<Membership> {
-        return membershipList;
+        return membershipList
     }
 
     public fun Init() {
@@ -33,11 +33,25 @@ class CollectionRepository {
     public fun CreateCollection(name : String) {
         val customCollection = GameCollection(collectionList.lastIndex + 1, name, CollectionType.Custom)
         if(collectionList.find{it.name == name} != null)
-            return;
+            return
         collectionList.add(customCollection)
-        return;
+        return
 
     }
 
+    public fun DeleteCollection(collectionEntry : GameCollection) {
+        collectionList.remove(collectionEntry)
+        val collectionID = collectionEntry.id
+        membershipList.removeAll{it.collectionID == collectionID}
+        return
+    }
 
+    public fun AddGameToCollection(gameEntry : GameRef, collectionEntry: GameCollection) {
+        if(membershipList.find{it.collectionID == collectionEntry.id; it.gameID == gameEntry.id} != null)
+            return
+        if(collectionEntry.status == CollectionType.Owned)
+            membershipList.removeAll{it.collectionID == collectionEntry.id; it.gameID == gameEntry.id}
+        val newMembership = Membership(collectionEntry.id, gameEntry.id, )
+        membershipList.add()
+    }
 }
