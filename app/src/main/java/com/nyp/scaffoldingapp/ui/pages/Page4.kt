@@ -1,5 +1,6 @@
 package com.nyp.scaffoldingapp.ui.pages
 
+import android.app.Application
 import android.media.Image
 import android.text.style.BackgroundColorSpan
 import androidx.compose.foundation.layout.*
@@ -18,22 +19,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import java.util.Date
 
 
-data class GameCollection(val id : Int, val name : String, val status : CollectionStatus)
 
-data class GameRef(val id : Int, val name : String, val thumbnail : Image, val thumbNailURL : String)
-
-data class Membership(val collectionID : Int, val gameID : Int, val dateAdded : Long)
-enum class CollectionStatus{
-    Owned,
-    Wishlist,
-    Custom
-}
 @Composable
 fun Page4(modifier: Modifier = Modifier) {
    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), verticalArrangement = Arrangement.Top,
        horizontalAlignment = Alignment.CenterHorizontally)
    {
-        
+
    }
 }
 
@@ -43,6 +35,6 @@ fun PreviewCollectionsPage()
 {
     ScaffoldingTheme(false)
     {
-        Page4();
+        Page4()
     }
 }
