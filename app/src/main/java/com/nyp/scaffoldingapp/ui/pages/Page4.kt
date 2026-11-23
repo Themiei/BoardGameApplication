@@ -1,5 +1,6 @@
 package com.nyp.scaffoldingapp.ui.pages
 
+import android.media.Image
 import android.text.style.BackgroundColorSpan
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -14,20 +15,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import java.util.Date
 
 
-/**
- * Page 4 — the game launcher.
- *
- * The button is deliberately NOT wired up. Connecting it to a LibGDX
- * Activity is Assignment 2, and it is taught in the Week 9 session:
- *
- *   - launching an Activity for a result
- *   - passing a value back, and what happens when there isn't one
- *   - the lifecycle trap that leaks on the second launch
- *
- * See the Week 9 slides. Do not guess at it from here.
- */
+data class Collection(val collectionID: Int, val name: String, val status : CollectionStatus)
+
+data class GameRef(val gameID : Int, val gameName : String, val gameThumbnail : Image)
+
+data class Membership(val collectionID : Int, val gameID : Int, val dateAdded : Date)
+enum class CollectionStatus{
+    Owned,
+    Wishlist,
+    Others
+}
 @Composable
 fun Page4(modifier: Modifier = Modifier) {
    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), verticalArrangement = Arrangement.Top,
