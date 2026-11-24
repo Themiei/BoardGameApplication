@@ -1,8 +1,7 @@
 package com.nyp.scaffoldingapp.data.model
 
-import android.media.Image
 
-data class GameCollection(val id : Int, var name : String, val status : CollectionType)
+data class GameCollection(val id : Int, val name : String, val type : CollectionType)
 
 data class GameRef(val id : Int, val name : String, val thumbNailURL : String)
 

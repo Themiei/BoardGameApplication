@@ -1,6 +1,5 @@
 package com.nyp.scaffoldingapp.data
 
-import android.R
 import com.nyp.scaffoldingapp.data.model.GameCollection
 import com.nyp.scaffoldingapp.data.model.GameRef
 import com.nyp.scaffoldingapp.data.model.Membership
@@ -8,27 +7,19 @@ import com.nyp.scaffoldingapp.data.model.PlaySession
 import com.nyp.scaffoldingapp.data.model.CollectionType
 import com.nyp.scaffoldingapp.data.model.PlayError
 
-import java.util.Calendar
+
 class CollectionRepository {
 
-    private val collectionList : MutableList<GameCollection> = mutableListOf<GameCollection>()
-    private val gamesList : MutableList<GameRef> = mutableListOf<GameRef>()
-    private val membershipList : MutableList<Membership> = mutableListOf<Membership>()
-    private val playSessionList : MutableList<PlaySession> = mutableListOf<PlaySession>()
+    private val collectionList : MutableList<GameCollection> = mutableListOf()
+    private val gamesList : MutableList<GameRef> = mutableListOf()
+    private val membershipList : MutableList<Membership> = mutableListOf()
+    private val playSessionList : MutableList<PlaySession> = mutableListOf()
     private var collectionIDCounter : Int = 0
     private var playSessionIDCounter : Int = 0
-    private val MAX_PLAY_MINUTES = 1440
+    private companion object val MAX_PLAY_MINUTES = 1440
 
-    public fun ReadCollections(): MutableList<GameCollection> {
-        return collectionList
-    }
-
-    public fun ReadGames() : List<GameRef> {
-        return gamesList
-    }
-
-    public fun ReadMemberships() : List<Membership> {
-        return membershipList
+    fun readCollections(): List<GameCollection> {
+        return collectionList.toList()
     }
 
     init {
@@ -38,7 +29,7 @@ class CollectionRepository {
         collectionList.add(owned)
     }
 
-    public fun CreateCollection(name : String) : Boolean {
+    fun createCollection(name : String) : Boolean {
         val trim = name.trim()
         if(isNameTaken(trim) || trim.isBlank())
             return false
@@ -48,7 +39,7 @@ class CollectionRepository {
 
     }
 
-    public fun DeleteCollection(id : Int) {
+    fun deleteCollection(id : Int) {
         if(!isBuiltIn(id))
         {
             collectionList.removeAll{it.id == id}
@@ -57,7 +48,7 @@ class CollectionRepository {
         return
     }
 
-    public fun AddGameToCollection(game : GameRef, collectionID : Int) {
+    fun addGameToCollection(game : GameRef, collectionID : Int) {
         storeGameIfNew(game)
         if(isMember(collectionID, game.id))
             return
@@ -69,7 +60,7 @@ class CollectionRepository {
         membershipList.add(newMembership)
     }
 
-    public fun RemoveGameFromCollection(gameEntry : Int, collectionEntry : Int){
+    fun removeGameFromCollection(gameEntry : Int, collectionEntry : Int){
         val foundMembership = isMember(collectionEntry, gameEntry)
         if(foundMembership)
             membershipList.removeAll{it.collectionID == collectionEntry && it.gameID == gameEntry}
@@ -84,27 +75,21 @@ class CollectionRepository {
 
     fun collectionOfType(type : CollectionType) : GameCollection?
     {
-        val collection = collectionList.find{it.status == type}
+        val collection = collectionList.find{it.type == type}
         return collection
     }
 
     fun isBuiltIn(collectionID : Int) : Boolean
     {
         val collection = collectionList.find{it.id == collectionID}
-        if(collection != null)
-        {
-            if(collection.status == CollectionType.Wishlist || collection.status == CollectionType.Owned)
-                return true
-            return false
-        }
-        return false
+        return collection != null && (collection.type == CollectionType.Wishlist || collection.type == CollectionType.Owned)
     }
 
-    public fun isNameTaken(name : String, id : Int?= null) : Boolean
+    fun isNameTaken(name : String, id : Int?= null) : Boolean
     {
         val result = name.filterNot{it.isWhitespace()}.lowercase()
         val list = collectionList.filterNot{it.id == id}
-        val bool = list.any{it.name.filterNot{it.isWhitespace()}.lowercase() == result}
+        val bool = list.any{it -> it.name.filterNot{it.isWhitespace()}.lowercase() == result}
         return bool
     }
 
@@ -123,27 +108,27 @@ class CollectionRepository {
         return
     }
 
-    public fun gamesIn(collectionID : Int) : List<GameRef>
+    fun gamesIn(collectionID : Int) : List<GameRef>
     {
         val membershipPings = membershipList.filter{it.collectionID == collectionID}.map{it.gameID}.toSet()
        return gamesList.filter{it.id in membershipPings}
     }
 
-    public fun collectionsContaining(gameID : Int) : List<GameCollection>
+    fun collectionsContaining(gameID : Int) : List<GameCollection>
     {
         val listOfCollectionIDs = membershipList.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
         return collectionList.filter{it.id in listOfCollectionIDs}
     }
 
-    public fun findCollection(id : Int) : GameCollection? {
+    fun findCollection(id : Int) : GameCollection? {
         return collectionList.find{it.id == id}
     }
 
-    public fun gameCountInCollection(id : Int) : Int {
+    fun gameCountInCollection(id : Int) : Int {
         return gamesIn(id).count()
     }
 
-    public fun renameCollection(id: Int, name : String) : Boolean {
+    fun renameCollection(id: Int, name : String) : Boolean {
         val trim = name.trim()
         if(isNameTaken(trim, id) || trim.isBlank() || isBuiltIn(id))
             return false
