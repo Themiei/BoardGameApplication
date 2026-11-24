@@ -1,32 +1,37 @@
 package com.nyp.scaffoldingapp.data
 
+import com.nyp.scaffoldingapp.data.model.CollectionData
 import com.nyp.scaffoldingapp.data.model.GameCollection
 import com.nyp.scaffoldingapp.data.model.GameRef
 import com.nyp.scaffoldingapp.data.model.Membership
 import com.nyp.scaffoldingapp.data.model.PlaySession
 import com.nyp.scaffoldingapp.data.model.CollectionType
 import com.nyp.scaffoldingapp.data.model.PlayError
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 
 class CollectionRepository {
 
-    private val collectionList : MutableList<GameCollection> = mutableListOf()
-    private val gamesList : MutableList<GameRef> = mutableListOf()
-    private val membershipList : MutableList<Membership> = mutableListOf()
-    private val playSessionList : MutableList<PlaySession> = mutableListOf()
+    private val collectionState = MutableStateFlow(CollectionData())
+    val data: StateFlow<CollectionData> = collectionState.asStateFlow()
     private var collectionIDCounter : Int = 0
     private var playSessionIDCounter : Int = 0
-    private companion object val MAX_PLAY_MINUTES = 1440
+    companion object
+    {
+        const val MAX_PLAY_MINUTES = 1440
+    }
 
     fun readCollections(): List<GameCollection> {
-        return collectionList.toList()
+        return collectionState.value.collection
     }
 
     init {
-        val wishlist = GameCollection(nextCollectionID(), "WishList", CollectionType.Wishlist)
+        val wishlist = GameCollection(nextCollectionID(), "Wishlist", CollectionType.Wishlist)
         val owned = GameCollection(nextCollectionID(), "Owned", CollectionType.Owned)
-        collectionList.add(wishlist)
-        collectionList.add(owned)
+        collectionState.update { it.copy(collection = listOf(wishlist, owned)) }
     }
 
     fun createCollection(name : String) : Boolean {
@@ -34,7 +39,7 @@ class CollectionRepository {
         if(isNameTaken(trim) || trim.isBlank())
             return false
         val customCollection = GameCollection(nextCollectionID(), trim, CollectionType.Custom)
-        collectionList.add(customCollection)
+        collectionState.update { it.copy(collection = it.collection + customCollection) }
         return true
 
     }
@@ -42,86 +47,85 @@ class CollectionRepository {
     fun deleteCollection(id : Int) {
         if(!isBuiltIn(id))
         {
-            collectionList.removeAll{it.id == id}
-            membershipList.removeAll{it.collectionID == id}
+            collectionState.update{it.copy(membership = it.membership.filterNot{it.collectionID == id},
+                collection = it.collection.filterNot{it.id == id})}
         }
         return
     }
 
-    fun addGameToCollection(game : GameRef, collectionID : Int) {
-        storeGameIfNew(game)
-        if(isMember(collectionID, game.id))
+    fun addGameToCollection(game: GameRef, collectionID: Int) {
+        if (isMember(collectionID, game.id))
             return
-        val owned = collectionOfType(CollectionType.Owned)
-        val wishlist = collectionOfType(CollectionType.Wishlist)
-        if(owned?.id == collectionID)
-            membershipList.removeAll{it.collectionID == wishlist?.id && it.gameID == game.id}
-        val newMembership = Membership(collectionID, game.id, getTodayStartMillis())
-        membershipList.add(newMembership)
+
+        val wishlistId = collectionOfType(CollectionType.Wishlist)?.id
+        val addingToOwned = collectionOfType(CollectionType.Owned)?.id == collectionID
+        val newMembership = Membership(collectionID, game.id, System.currentTimeMillis())
+
+        collectionState.update { current ->
+            val games = if (current.games.any { it.id == game.id })
+                current.games
+            else
+                current.games + game
+            val memberships = current.membership.filterNot { addingToOwned && it.collectionID == wishlistId && it.gameID == game.id } + newMembership
+            current.copy(games = games, membership = memberships)
+        }
     }
 
-    fun removeGameFromCollection(gameEntry : Int, collectionEntry : Int){
-        val foundMembership = isMember(collectionEntry, gameEntry)
-        if(foundMembership)
-            membershipList.removeAll{it.collectionID == collectionEntry && it.gameID == gameEntry}
+    fun removeGameFromCollection(gameID : Int, collectionID : Int){
+
+        collectionState.update{it.copy(membership = it.membership.filterNot{it.collectionID == collectionID && it.gameID == gameID})}
     }
 
-    fun isMember(collectionID : Int, gameID : Int) : Boolean
+    private fun isMember(collectionID : Int, gameID : Int) : Boolean
     {
 
-        val membershipMatch = membershipList.any{it.collectionID == collectionID && it.gameID == gameID}
+        val membershipMatch = collectionState.value.membership.any{it.collectionID == collectionID && it.gameID == gameID}
         return membershipMatch
     }
 
-    fun collectionOfType(type : CollectionType) : GameCollection?
+    private fun collectionOfType(type : CollectionType) : GameCollection?
     {
-        val collection = collectionList.find{it.type == type}
+        val collection = collectionState.value.collection.find{it.type == type}
         return collection
     }
 
     fun isBuiltIn(collectionID : Int) : Boolean
     {
-        val collection = collectionList.find{it.id == collectionID}
+        val collection = collectionState.value.collection.find{it.id == collectionID}
         return collection != null && (collection.type == CollectionType.Wishlist || collection.type == CollectionType.Owned)
     }
 
     fun isNameTaken(name : String, id : Int?= null) : Boolean
     {
         val result = name.filterNot{it.isWhitespace()}.lowercase()
-        val list = collectionList.filterNot{it.id == id}
+        val list = collectionState.value.collection.filterNot{it.id == id}
         val bool = list.any{it -> it.name.filterNot{it.isWhitespace()}.lowercase() == result}
         return bool
     }
 
-    fun nextCollectionID() : Int
+    private fun nextCollectionID() : Int
     {
         val counter = collectionIDCounter
         collectionIDCounter += 1
         return counter
     }
 
-    fun storeGameIfNew(game : GameRef)
-    {
-        if(gamesList.any{it.id == game.id})
-            return
-        gamesList.add(game)
-        return
-    }
+
 
     fun gamesIn(collectionID : Int) : List<GameRef>
     {
-        val membershipPings = membershipList.filter{it.collectionID == collectionID}.map{it.gameID}.toSet()
-       return gamesList.filter{it.id in membershipPings}
+        val membershipPings = collectionState.value.membership.filter{it.collectionID == collectionID}.map{it.gameID}.toSet()
+       return collectionState.value.games.filter{it.id in membershipPings}
     }
 
     fun collectionsContaining(gameID : Int) : List<GameCollection>
     {
-        val listOfCollectionIDs = membershipList.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
-        return collectionList.filter{it.id in listOfCollectionIDs}
+        val listOfCollectionIDs = collectionState.value.membership.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
+        return collectionState.value.collection.filter{it.id in listOfCollectionIDs}
     }
 
     fun findCollection(id : Int) : GameCollection? {
-        return collectionList.find{it.id == id}
+        return collectionState.value.collection.find{it.id == id}
     }
 
     fun gameCountInCollection(id : Int) : Int {
@@ -132,10 +136,14 @@ class CollectionRepository {
         val trim = name.trim()
         if(isNameTaken(trim, id) || trim.isBlank() || isBuiltIn(id))
             return false
-        val index = collectionList.indexOfFirst{it.id == id}
+        val index = collectionState.value.collection.indexOfFirst{it.id == id}
         if(index != -1)
         {
-            collectionList[index] = collectionList[index].copy(name = trim)
+            collectionState.update{it.copy(collection = it.collection.map {c ->
+                if(c.id == id)
+                c.copy(name = trim)
+            else
+                c})}
             return true
         }
         return false
@@ -186,7 +194,7 @@ class CollectionRepository {
 
     fun logPlay(gameId : Int, datePlayed : Long, durationMinutes : Int, players : List<String>, winner : String? = null) : PlayError?
     {
-        if(gamesList.none { it.id == gameId })
+        if(collectionState.value.games.none { it.id == gameId })
             return PlayError.GAME_NOT_FOUND
 
         val error = validatePlayers(players)
@@ -201,18 +209,20 @@ class CollectionRepository {
             cleanPlayers.first { it.equals(typed, ignoreCase = true) }
         }
         val play = PlaySession(nextPlaySessionID(), gameId, datePlayed, durationMinutes, cleanPlayers, storedWinner)
-        playSessionList.add(play)
+        collectionState.update{it.copy(playSessions = it.playSessions + play)}
         return null
     }
 
     fun playsFor(gameId : Int) : List<PlaySession>
     {
-        return playSessionList.filter { it.gameId == gameId }.sortedByDescending { it.datePlayed }
+        return collectionState.value.playSessions.filter { it.gameId == gameId }.sortedByDescending { it.datePlayed }
     }
 
     fun deletePlay(playId : Int) : Boolean
     {
-        return playSessionList.removeAll { it.id == playId }
+        val playValid = collectionState.value.playSessions.any{ it.id == playId }
+        collectionState.update{it.copy(playSessions = it.playSessions.filterNot{ it.id == playId })}
+        return playValid
     }
 
     private fun cleanNames(players : List<String>) : List<String>

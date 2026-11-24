@@ -7,6 +7,7 @@ data class GameRef(val id : Int, val name : String, val thumbNailURL : String)
 
 data class Membership(val collectionID : Int, val gameID : Int, val dateAdded : Long)
 
+data class CollectionData( val collection : List<GameCollection> = emptyList(), val games : List<GameRef> = emptyList(), val membership : List<Membership> = emptyList(), val playSessions : List<PlaySession> = emptyList())
 data class PlaySession(
     val id : Int,
     val gameId : Int,
