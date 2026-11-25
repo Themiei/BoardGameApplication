@@ -12,7 +12,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+fun CollectionData.gamesIn(collectionId: Int): List<GameRef> {
+    val gameIds = membership.filter{it.collectionID == collectionId}.map{it.gameID}.toSet()
+    return games.filter{it.id in gameIds}
+}
 
+fun CollectionData.collectionsContaining(gameID : Int) : List<GameCollection>
+{
+    val listOfCollectionIDs = membership.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
+    return collection.filter{it.id in listOfCollectionIDs}
+}
 class CollectionRepository {
 
     private val collectionState = MutableStateFlow(CollectionData())
@@ -22,10 +31,6 @@ class CollectionRepository {
     companion object
     {
         const val MAX_PLAY_MINUTES = 1440
-    }
-
-    fun readCollections(): List<GameCollection> {
-        return collectionState.value.collection
     }
 
     init {
@@ -47,8 +52,9 @@ class CollectionRepository {
     fun deleteCollection(id : Int) {
         if(!isBuiltIn(id))
         {
-            collectionState.update{it.copy(membership = it.membership.filterNot{it.collectionID == id},
-                collection = it.collection.filterNot{it.id == id})}
+            collectionState.update{current -> current.copy(
+                membership = current.membership.filterNot{it.collectionID == id},
+                collection = current.collection.filterNot{it.id == id})}
         }
         return
     }
@@ -73,7 +79,8 @@ class CollectionRepository {
 
     fun removeGameFromCollection(gameID : Int, collectionID : Int){
 
-        collectionState.update{it.copy(membership = it.membership.filterNot{it.collectionID == collectionID && it.gameID == gameID})}
+        collectionState.update{current -> current.copy(
+            membership = current.membership.filterNot{it.collectionID == collectionID && it.gameID == gameID})}
     }
 
     private fun isMember(collectionID : Int, gameID : Int) : Boolean
@@ -112,24 +119,12 @@ class CollectionRepository {
 
 
 
-    fun gamesIn(collectionID : Int) : List<GameRef>
-    {
-        val membershipPings = collectionState.value.membership.filter{it.collectionID == collectionID}.map{it.gameID}.toSet()
-       return collectionState.value.games.filter{it.id in membershipPings}
-    }
-
-    fun collectionsContaining(gameID : Int) : List<GameCollection>
-    {
-        val listOfCollectionIDs = collectionState.value.membership.filter{it.gameID == gameID}.map{it.collectionID}.toSet()
-        return collectionState.value.collection.filter{it.id in listOfCollectionIDs}
-    }
-
     fun findCollection(id : Int) : GameCollection? {
         return collectionState.value.collection.find{it.id == id}
     }
 
     fun gameCountInCollection(id : Int) : Int {
-        return gamesIn(id).count()
+        return collectionState.value.gamesIn(id).count()
     }
 
     fun renameCollection(id: Int, name : String) : Boolean {
@@ -161,17 +156,20 @@ class CollectionRepository {
         val cleanPlayers = cleanNames(players)
         if(cleanPlayers.isEmpty())
             return PlayError.NO_PLAYERS
-        if(cleanPlayers.any { it.isEmpty() })
+
+        if(cleanPlayers.any{it.isEmpty()})
             return PlayError.BLANK_NAME
-        if(cleanPlayers.map { it.lowercase() }.distinct().size != cleanPlayers.size)
+
+        if(cleanPlayers.map{it.lowercase()}.distinct().size != cleanPlayers.size)
             return PlayError.DUPLICATE_NAME
+
         return null
     }
 
     fun validateWinner(winner : String?, players : List<String>) : PlayError?
     {
         val cleanWinner = cleanWinner(winner) ?: return null
-        if(cleanNames(players).none { it.equals(cleanWinner, ignoreCase = true) })
+        if(cleanNames(players).none{it.equals(cleanWinner, ignoreCase = true)})
             return PlayError.WINNER_NOT_A_PLAYER
         return null
     }
@@ -194,19 +192,20 @@ class CollectionRepository {
 
     fun logPlay(gameId : Int, datePlayed : Long, durationMinutes : Int, players : List<String>, winner : String? = null) : PlayError?
     {
-        if(collectionState.value.games.none { it.id == gameId })
+        if(collectionState.value.games.none{it.id == gameId})
             return PlayError.GAME_NOT_FOUND
 
         val error = validatePlayers(players)
             ?: validateWinner(winner, players)
             ?: validateDuration(durationMinutes)
             ?: validateDate(datePlayed)
+
         if(error != null)
             return error
 
         val cleanPlayers = cleanNames(players)
-        val storedWinner = cleanWinner(winner)?.let { typed ->
-            cleanPlayers.first { it.equals(typed, ignoreCase = true) }
+        val storedWinner = cleanWinner(winner)?.let {typed ->
+            cleanPlayers.first {it.equals(typed, ignoreCase = true) }
         }
         val play = PlaySession(nextPlaySessionID(), gameId, datePlayed, durationMinutes, cleanPlayers, storedWinner)
         collectionState.update{it.copy(playSessions = it.playSessions + play)}
@@ -215,24 +214,24 @@ class CollectionRepository {
 
     fun playsFor(gameId : Int) : List<PlaySession>
     {
-        return collectionState.value.playSessions.filter { it.gameId == gameId }.sortedByDescending { it.datePlayed }
+        return collectionState.value.playSessions.filter{it.gameId == gameId}.sortedByDescending { it.datePlayed }
     }
 
     fun deletePlay(playId : Int) : Boolean
     {
-        val playValid = collectionState.value.playSessions.any{ it.id == playId }
-        collectionState.update{it.copy(playSessions = it.playSessions.filterNot{ it.id == playId })}
+        val playValid = collectionState.value.playSessions.any{it.id == playId}
+        collectionState.update{it.copy(playSessions = it.playSessions.filterNot{it.id == playId})}
         return playValid
     }
 
     private fun cleanNames(players : List<String>) : List<String>
     {
-        return players.map { it.trim() }
+        return players.map {it.trim()}
     }
 
     private fun cleanWinner(winner : String?) : String?
     {
-        return winner?.trim()?.takeIf { it.isNotEmpty() }
+        return winner?.trim()?.takeIf{it.isNotEmpty()}
     }
 
 
