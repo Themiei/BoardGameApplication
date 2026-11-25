@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import com.nyp.scaffoldingapp.ui.pages.*
+import com.nyp.scaffoldingapp.ui.pages.collections.Page4
 import com.nyp.scaffoldingapp.ui.theme.ScaffoldingTheme
 
 /**

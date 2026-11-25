@@ -1,4 +1,4 @@
-package com.nyp.scaffoldingapp.ui.pages
+package com.nyp.scaffoldingapp.ui.pages.collections
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
