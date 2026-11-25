@@ -37,6 +37,9 @@ class CollectionsViewModel private constructor(private val repo : CollectionRepo
     private val _dialog = MutableStateFlow(NameDialogState())
     val dialog : StateFlow<NameDialogState> = _dialog.asStateFlow()
 
+    private val _pendingDelete = MutableStateFlow<GameCollection?>(null)
+    val pendingDelete = _pendingDelete.asStateFlow()
+
     fun openCreateDialog(){
         _dialog.update{
             it.copy(isOpen = true, editingId = null, text = "", error = null)
@@ -79,6 +82,21 @@ class CollectionsViewModel private constructor(private val repo : CollectionRepo
 
     fun dismissDialog(){
         _dialog.update{NameDialogState()}
+    }
+
+    fun requestDelete(collection : GameCollection){
+        _pendingDelete.update{collection}
+    }
+
+    fun confirmDelete(){
+        val deleteId = _pendingDelete.value?.id
+        if(deleteId != null)
+            repo.deleteCollection(deleteId)
+        _pendingDelete.update{null}
+    }
+
+    fun cancelDelete(){
+        _pendingDelete.update{null}
     }
     companion object {
         val Factory : ViewModelProvider.Factory = viewModelFactory {
