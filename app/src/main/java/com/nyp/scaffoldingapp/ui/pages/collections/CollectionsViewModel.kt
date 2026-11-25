@@ -1,5 +1,6 @@
 package com.nyp.scaffoldingapp.ui.pages.collections
 
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
@@ -14,6 +15,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import androidx.lifecycle.viewModelScope
 import com.nyp.scaffoldingapp.data.gamesIn
+import com.nyp.scaffoldingapp.data.model.NameError
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.collections.emptyList
 
 class CollectionsViewModel private constructor(private val repo : CollectionRepository) : ViewModel(){
@@ -29,6 +34,52 @@ class CollectionsViewModel private constructor(private val repo : CollectionRepo
             SharingStarted.WhileSubscribed(5_000),
             emptyList())
 
+    private val _dialog = MutableStateFlow(NameDialogState())
+    val dialog : StateFlow<NameDialogState> = _dialog.asStateFlow()
+
+    fun openCreateDialog(){
+        _dialog.update{
+            it.copy(isOpen = true, editingId = null, text = "", error = null)
+        }
+    }
+
+    fun openRenameDialog(collection : GameCollection){
+        _dialog.update{
+            it.copy(isOpen = true, editingId = collection.id, text = collection.name, error = null)
+        }
+    }
+
+    fun onNameChanged(text : String){
+        _dialog.update {
+            current -> current.copy(
+            text = text, error = repo.validateCollectionName(text, current.editingId)
+            ) }
+    }
+
+    fun confirmName(){
+        val state = _dialog.value
+        if(state.editingId == null){
+            val repoCall = repo.createCollection(state.text)
+            if(repoCall != null)
+                _dialog.update{current ->current.copy(error = repoCall)}
+            else{
+                dismissDialog()
+            }
+        }
+        else{
+            val repoCall = repo.renameCollection(state.editingId, state.text)
+            if(!repoCall)
+                _dialog.update{current -> current.copy(error = repo.validateCollectionName(current.text, current.editingId))}
+            else{
+                dismissDialog()
+            }
+        }
+
+    }
+
+    fun dismissDialog(){
+        _dialog.update{NameDialogState()}
+    }
     companion object {
         val Factory : ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -42,5 +93,12 @@ class CollectionsViewModel private constructor(private val repo : CollectionRepo
 data class CollectionSummary(val collection : GameCollection,
                              val gameCount : Int,
                              val previewThumbnails : List<String>) {
+
+}
+
+data class NameDialogState(val isOpen : Boolean = false,
+                           val editingId : Int? = null,
+                           val text: String = "",
+                           val error : NameError? = null){
 
 }

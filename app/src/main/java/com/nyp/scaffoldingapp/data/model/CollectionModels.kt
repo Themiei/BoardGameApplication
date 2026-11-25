@@ -42,3 +42,8 @@ enum class PlayError{
     DURATION_TOO_LONG,
     DATE_IN_FUTURE
 }
+
+enum class NameError{
+    BLANK,
+    TAKEN
+}

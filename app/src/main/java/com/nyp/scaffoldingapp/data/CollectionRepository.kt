@@ -6,6 +6,7 @@ import com.nyp.scaffoldingapp.data.model.GameRef
 import com.nyp.scaffoldingapp.data.model.Membership
 import com.nyp.scaffoldingapp.data.model.PlaySession
 import com.nyp.scaffoldingapp.data.model.CollectionType
+import com.nyp.scaffoldingapp.data.model.NameError
 import com.nyp.scaffoldingapp.data.model.PlayError
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,13 +40,14 @@ class CollectionRepository {
         collectionState.update { it.copy(collection = listOf(wishlist, owned)) }
     }
 
-    fun createCollection(name : String) : Boolean {
-        val trim = name.trim()
-        if(isNameTaken(trim) || trim.isBlank())
-            return false
-        val customCollection = GameCollection(nextCollectionID(), trim, CollectionType.Custom)
+    fun createCollection(name : String) : NameError? {
+        val result = validateCollectionName(name)
+        if(result != null)
+            return result
+
+        val customCollection = GameCollection(nextCollectionID(), name.trim(), CollectionType.Custom)
         collectionState.update { it.copy(collection = it.collection + customCollection) }
-        return true
+        return null
 
     }
 
@@ -102,7 +104,7 @@ class CollectionRepository {
         return collection != null && (collection.type == CollectionType.Wishlist || collection.type == CollectionType.Owned)
     }
 
-    fun isNameTaken(name : String, id : Int?= null) : Boolean
+    private fun isNameTaken(name : String, id : Int?= null) : Boolean
     {
         val result = name.filterNot{it.isWhitespace()}.lowercase()
         val list = collectionState.value.collection.filterNot{it.id == id}
@@ -128,21 +130,35 @@ class CollectionRepository {
     }
 
     fun renameCollection(id: Int, name : String) : Boolean {
-        val trim = name.trim()
-        if(isNameTaken(trim, id) || trim.isBlank() || isBuiltIn(id))
+        if(isBuiltIn(id))
+            return false
+        if(validateCollectionName(name, id) != null)
             return false
         val index = collectionState.value.collection.indexOfFirst{it.id == id}
         if(index != -1)
         {
             collectionState.update{it.copy(collection = it.collection.map {c ->
                 if(c.id == id)
-                c.copy(name = trim)
+                c.copy(name = name.trim())
             else
                 c})}
             return true
         }
         return false
     }
+
+    fun validateCollectionName(name : String, id : Int?= null) : NameError? {
+        val trim = name.trim()
+
+        if(trim.isBlank())
+            return NameError.BLANK
+
+        if(isNameTaken(trim, id))
+            return NameError.TAKEN
+
+        return null
+    }
+
 
     private fun nextPlaySessionID() : Int
     {
