@@ -11,7 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import com.nyp.scaffoldingapp.ui.pages.*
-import com.nyp.scaffoldingapp.ui.pages.collections.Page4
+import com.nyp.scaffoldingapp.ui.pages.collections.CollectionsScreen
 import com.nyp.scaffoldingapp.ui.theme.ScaffoldingTheme
 
 /**
@@ -71,7 +71,9 @@ fun AppScaffold() {
                 Tab.PAGE1 -> Page1()
                 Tab.PAGE2 -> Page2()
                 Tab.PAGE3 -> Page3()
-                Tab.PAGE4 -> Page4()
+                Tab.PAGE4 -> CollectionsScreen()
+
+
             }
         }
     }

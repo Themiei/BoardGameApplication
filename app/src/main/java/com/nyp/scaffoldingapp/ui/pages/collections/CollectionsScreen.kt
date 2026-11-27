@@ -7,15 +7,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nyp.scaffoldingapp.ui.theme.ScaffoldingTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nyp.scaffoldingapp.data.model.CollectionType
 import com.nyp.scaffoldingapp.data.model.GameCollection
+import com.nyp.scaffoldingapp.ui.theme.ScaffoldingTheme
 
 
 @Composable
@@ -30,7 +42,7 @@ fun CollectionCard(summary: CollectionSummary,
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)){
 
-            thumbnailStrip(summary.previewThumbnails)
+            ThumbnailStrip(summary.previewThumbnails)
 
             Column(modifier = Modifier.weight(1f)){
                 Text(text = summary.collection.name,
@@ -38,34 +50,97 @@ fun CollectionCard(summary: CollectionSummary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
 
-                Text(text = summary.gameCount.toString(),
+                Text(text = numberDisplay(summary.gameCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            Box(modifier = Modifier){
-
+            if (summary.collection.type == CollectionType.Custom) {
+                CollectionMenu(
+                    collectionName = summary.collection.name,
+                    onRename = onRename,
+                    onDelete = onDelete
+                )
             }
+
         }
     }
 
 }
 
 @Composable
-fun thumbnailStrip(urls : List<String>){
+fun CollectionMenu(
+    collectionName : String,
+    onRename: () -> Unit,
+    onDelete : () -> Unit
+){
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    Box(modifier = Modifier){
+        IconButton(onClick = {expanded = true}){
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Options for $collectionName"
+
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {expanded = false}
+        ){
+            DropdownMenuItem(
+                text = {Text("Rename")},
+                leadingIcon = {Icon(Icons.Default.Edit, contentDescription = null)},
+                onClick = {
+                    expanded = false
+                    onRename()
+                }
+            )
+            DropdownMenuItem(
+                text = {Text("Delete")},
+                leadingIcon = {Icon(Icons.Default.Delete, contentDescription = null)},
+                onClick = {
+                    expanded = false
+                    onDelete()
+                }
+            )
+        }
+    }
+}
+@Composable
+fun ThumbnailStrip(urls : List<String>){
     if(urls.isEmpty())
-        Box(modifier = Modifier
-            .padding(12.dp)
-            .background(MaterialTheme.colorScheme.onPrimaryContainer))
+        Box(Modifier.size(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.onSurfaceVariant))
     else{
-        Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)){
-            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
-            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
-            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
+        Row(modifier = Modifier,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)){
+
+            urls.forEach()
+            {
+                Box(modifier = Modifier.size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant))
+            }
+
         }
     }
 }
 
+private fun numberDisplay(number : Int) : String{
+    return if(number <= 0) {
+        "No Games"
+    }else if(number > 1){
+        "$number Games"
+    }else{
+        "$number Game"
+    }
+
+}
 private val previewSummaries = listOf(
 
     CollectionSummary(
@@ -99,23 +174,53 @@ private val previewSummaries = listOf(
     )
 )
 
-
-@Preview
 @Composable
-private fun CollectionCardPreview() {
-    ScaffoldingTheme(darkTheme = false, dynamicColor = false) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            previewSummaries.forEach { summary ->
-                CollectionCard(
-                    summary = summary,
-                    onClick = {},
-                    onRename = {},
-                    onDelete = {}
-                )
-            }
+fun CollectionsList(
+    summaries: List<CollectionSummary>,
+    onOpen: (GameCollection) -> Unit,
+    onRename: (GameCollection) -> Unit,
+    onDelete: (GameCollection) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(summaries, key = { it.collection.id }) { summary ->
+            CollectionCard(
+                summary = summary,
+                onClick = { onOpen(summary.collection) },
+                onRename = { onRename(summary.collection) },
+                onDelete = { onDelete(summary.collection) },
+                modifier = Modifier.animateItem()
+            )
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CollectionsListPreview() {
+    ScaffoldingTheme(darkTheme = false, dynamicColor = false) {
+        CollectionsList(
+            summaries = previewSummaries,
+            onOpen = {},
+            onRename = {},
+            onDelete = {}
+        )
+    }
+}
+@Composable
+fun CollectionsScreen(modifier: Modifier = Modifier) {
+    val viewModel: CollectionsViewModel = viewModel(factory = CollectionsViewModel.Factory)
+    val collections by viewModel.collections.collectAsState()
+
+    CollectionsList(
+        summaries = collections,
+        onOpen = { },
+        onRename = viewModel::openRenameDialog,
+        onDelete = viewModel::requestDelete,
+        modifier = modifier
+    )
 }
