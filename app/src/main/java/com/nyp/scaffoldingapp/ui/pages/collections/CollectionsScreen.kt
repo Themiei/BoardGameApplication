@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nyp.scaffoldingapp.data.model.CollectionType
 import com.nyp.scaffoldingapp.data.model.GameCollection
+import com.nyp.scaffoldingapp.data.model.NameError
 import com.nyp.scaffoldingapp.ui.theme.ScaffoldingTheme
 
 
@@ -141,6 +142,59 @@ private fun numberDisplay(number : Int) : String{
     }
 
 }
+
+@Composable
+private fun NameDialog(state :NameDialogState,
+                       onTextChange : (String) -> Unit,
+                       onConfirm : () -> Unit,
+                       onDismiss : () -> Unit){
+
+    val renaming = state.editingId != null
+    val confirm = state.text.isNotBlank() && state.error == null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { if(renaming) Text("Renaming Collection") else Text("Creating Collection") },
+        text = {
+            OutlinedTextField(
+                value = state.text,
+                onValueChange = onTextChange,
+                label = {Text("Name")},
+                singleLine = true,
+                isError = state.error != null,
+                supportingText = {
+                    if(state.error != null){
+                        Text(nameErrorMessage(state.error))
+                    }
+                }
+            )
+
+        },
+
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = confirm
+            ){
+                if(renaming)
+                    Text("Rename")
+                else
+                    Text("Create")
+            }
+        },
+
+        dismissButton = {
+            TextButton(onClick = onDismiss){
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+private fun nameErrorMessage(error : NameError) : String = when (error){
+    NameError.BLANK -> "Name cannot be empty"
+    NameError.TAKEN -> "Name has already been taken"
+}
 private val previewSummaries = listOf(
 
     CollectionSummary(
@@ -215,6 +269,16 @@ private fun CollectionsListPreview() {
 fun CollectionsScreen(modifier: Modifier = Modifier) {
     val viewModel: CollectionsViewModel = viewModel(factory = CollectionsViewModel.Factory)
     val collections by viewModel.collections.collectAsState()
+    val dialog by viewModel.dialog.collectAsState()
+
+    if (dialog.isOpen) {
+        NameDialog(
+            state = dialog,
+            onTextChange = viewModel::onNameChanged,
+            onConfirm = viewModel::confirmName,
+            onDismiss = viewModel::dismissDialog
+        )
+    }
 
     CollectionsList(
         summaries = collections,
